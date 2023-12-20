@@ -1,20 +1,26 @@
 import asyncHandler from "express-async-handler";
 import { Request, Response } from "express";
 import Loan, { LoanInterface } from "../models/LoanModel";
-import Book from "../models/LoanModel";
+import Book from "../models/BookModel";
 import mongoose from "mongoose";
+const objectId = mongoose.Types.ObjectId;
 
 const createLoan = asyncHandler(async (req: Request, res: Response) => {
-  const { clientId, bookId, loanDate, returnDate } = req.body as LoanInterface;
+  const { clientId, bookId: id, loanDate, returnDate } = req.body as LoanInterface;
+  console.log("BOOK ID", id)
 
-  console.log(req.body);
   try {
     const newLoan = new Loan({
       clientId,
-      bookId,
+      bookId: id,
       loanDate,
       returnDate,
     });
+
+    await Book.findByIdAndUpdate(id, {
+      avaliable: false
+    }, { new: true })
+
 
     const savedLoan = await newLoan.save();
     res.status(201).json({ success: true, data: savedLoan });
@@ -24,7 +30,7 @@ const createLoan = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getAllLoans = asyncHandler(async (req: Request, res: Response) => {
-  const findAll = await Loan.find();
+  const findAll = await Loan.find().populate(["bookId", "clientId"]).exec();
 
   if (!findAll || findAll.length === 0) {
     res
@@ -61,8 +67,28 @@ const updateOneLoan = asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: updatedBook });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ success: false, data: "Livro não encotrado" });
+    res.status(400).json({ success: false, data: "Empréstimo não encotrado" });
   }
 });
 
-export { createLoan, getAllLoans, getOneLoan, updateOneLoan };
+const deleteOneLoan = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const loan = await Loan.findById({ _id: id });
+
+    if (loan) {
+      await Book.findByIdAndUpdate(loan.bookId, {
+        avaliable: true
+      }, { new: true })
+
+      await Loan.findByIdAndDelete(id)
+    }
+
+    res.status(200).json({ success: true, data: "Empréstimo deletado" });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ success: false, data: "Empréstimo não deletado" });
+  }
+});
+
+export { createLoan, getAllLoans, getOneLoan, updateOneLoan, deleteOneLoan };

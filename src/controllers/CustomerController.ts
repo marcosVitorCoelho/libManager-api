@@ -55,12 +55,14 @@ const getAllCustomer = asyncHandler(async (req: Request, res: Response) => {
 
 const updateOneCustomer = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { firstName, lastName, email, password, address, birthDate } = req.body;
+  const { firstName, lastName, email, password, address, birthDate, cpf, rg } = req.body;
   try {
     const updatedCustomer = await Customer.findByIdAndUpdate(
       id,
       {
         firstName,
+        cpf,
+        rg,
         lastName,
         email,
         password,
